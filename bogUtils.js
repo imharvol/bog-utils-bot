@@ -1,0 +1,109 @@
+const Web3 = require('web3') // https://web3js.readthedocs.io/en/v1.3.4/index.html
+const https = require('https') // https://nodejs.org/api/https.html
+
+const web3 = new Web3('https://bsc-dataseed.binance.org/')
+
+// Variable that updates every ~500ms with the $BOG price with 4 decimals
+let cachedBogPrice = null
+
+/**
+ * Rounds a number n to d decimals
+ * @param {Number} n Number
+ * @param {Number} d Decimals. If not defined, will return the full number
+ * @returns Number n rounded to d decimals
+ */
+function roundDecimals (n, d) {
+  if ((d ?? true) === true) return n
+  return Math.round(n * (10 ** d)) / 10 ** d
+}
+
+/**
+ * Fetches a URL's contents
+ * @param {string} url URL to fetch
+ * @param {Object} options Options for https.get()
+ * @returns The URL's content
+ */
+function fetch (url, options = {}) {
+  return new Promise((resolve, reject) => {
+    https.get(url, options, (res) => {
+      let data = ''
+      res.setEncoding('utf8')
+      res.on('data', chunk => { data += chunk })
+      res.on('end', () => resolve(data))
+    }).on('error', reject)
+  })
+}
+
+/**
+ * Returns a web3 contract object from an address
+ * @param {string} address Address of the contract
+ * @returns web3 contract instance of the contract
+ */
+async function getContract (address) {
+  // Get the ABI
+  const req = await fetch('https://api.bscscan.com/api?module=contract&action=getabi&address=' + address + '&format=raw')
+  const abi = JSON.parse(req)
+
+  // Get the contract
+  const contract = new web3.eth.Contract(abi, address)
+
+  return contract
+}
+
+/**
+ * Gets the BOG token price using the BOG Oracle
+ * @param {Number} decimals Wanted decimals on the price, the rest will be rounded
+ * @returns BOG token price
+ */
+async function getBogPrice (decimals) {
+  const contractAddress = '0xb9A8e322aff57556a2CC00c89Fad003a61C5ac41'
+  const contract = await getContract(contractAddress)
+
+  const priceDecimals = await contract.methods.getDecimals().call()
+  const bog = await contract.methods.getSpotPrice().call()
+  const bnb = await contract.methods.getBNBSpotPrice().call()
+  const bnbUsd = (10 ** priceDecimals) / bnb
+  const bogBnb = (10 ** priceDecimals) / bog
+  const bogUsd = roundDecimals(bnbUsd * bogBnb, decimals)
+
+  return bogUsd
+}
+
+/**
+ * Gets a cached BOG token price which is updated every 500ms. This method is more recommended than getBogPrice, as getBogPrice takes some time.
+ * @param {Number} decimals Wanted decimals on the price, the rest will be rounded
+ * @returns BOG token cached price
+ */
+function getCachedBogPrice (decimals) {
+  if (!cachedBogPrice) throw new Error('cachedBogPrice is undefined. Probably the bot is still starting.')
+
+  return roundDecimals(cachedBogPrice, decimals)
+}
+
+// Caches the price of bog every 500ms into the cachedBogPrice variable
+(async () => {
+  while (true) {
+    cachedBogPrice = await getBogPrice(4)
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+})()
+
+/**
+ * Returns staking earnings of a address in $BOG
+ * @param {String} address
+ * * @param {Number} decimals
+ * @returns Staking earnings in $BOG
+ */
+async function getEarnings (address, decimals) {
+  const contractAddress = '0xD7B729ef857Aa773f47D37088A1181bB3fbF0099'
+  const contract = await getContract(contractAddress)
+
+  const priceDecimals = await contract.methods.decimals().call()
+  const earnings = (await contract.methods.getEarnings(address).call()) / (10 ** priceDecimals) // In BOG
+
+  return roundDecimals(earnings, decimals)
+}
+
+module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals }
+
+// TODO: Add function to stop caching the price
