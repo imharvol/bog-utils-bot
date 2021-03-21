@@ -119,6 +119,22 @@ function stopCaching () {
   if (cachingInterval) clearInterval(cachingInterval)
 }
 
-module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals, startCaching, stopCaching }
+/**
+ * Converts a ammount BOG to USD
+ * @param {Number} bog Ammount of BOG to be converted to USD
+ * @returns Equivalent USD ammount
+ */
+async function bogToUsd (bog) {
+  return bog * (await getCachedBogPrice())
+}
 
-// TODO: Add function to stop caching the price
+/**
+ * Converts a ammount USD to BOG
+ * @param {Number} usd Ammount of USD to be converted to BOG
+ * @returns Equivalent BOG ammount
+ */
+async function usdToBog (usd) {
+  return usd / (await getCachedBogPrice())
+}
+
+module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals, startCaching, stopCaching, bogToUsd, usdToBog }

@@ -1,6 +1,6 @@
 require('dotenv').config()
 const path = require('path')
-const { getCachedBogPrice, getEarnings, roundDecimals } = require('./bogUtils')
+const { getCachedBogPrice, getEarnings, roundDecimals, bogToUsd, usdToBog } = require('./bogUtils')
 const { Telegraf } = require('telegraf') // https://telegraf.js.org/
 const Database = require('better-sqlite3') // https://github.com/JoshuaWise/better-sqlite3/blob/HEAD/docs/api.md
 
@@ -36,9 +36,11 @@ I'm a utility bot for <a href="http://bogtools.io/">BogTools</a> and the <a href
 bot.help((ctx) => {
   const html = `
 - <b>/price</b> - Returns the price of BOG
-- <b>/setAddress</b> - Sets the default address for the other commands
-- <b>/earnings</b> - Returns the ammount of staked earnings
+- <b>/setAddress address</b> - Sets the default address for the other commands
+- <b>/earnings [address]</b> - Returns the ammount of staked earnings
 - <b>/resume</b> -  Returns a resume of the accound and of the BOG token
+- <b>/bogToUsd ammount</b> -  Converts ammount of BOG to USD
+- <b>/usdToBog ammount</b> -  Converts ammount of USD to BOG
     `
   ctx.replyWithHTML(html)
 })
@@ -126,6 +128,38 @@ bot.command('resume', async (ctx) => {
 Resume for <b>${address}</b>:
 - Current BOG price: <b>$${bogPrice}</b>
 - Staked earnings: <b>${stakedEarningsBog}</b> BOG = <b>$${stakedEarningsUsd}</b> 
+  `
+  ctx.replyWithHTML(html)
+})
+
+/**
+ * /bogToUsd bogNumber
+ *
+ * Converts a BOG ammount to USD
+ */
+bot.command('bogToUsd', async (ctx) => {
+  const messageArgs = ctx.message.text.split(' ').slice(1)
+  if (messageArgs.length !== 1) return ctx.replyWithHTML('You need to provide the ammount of BOG that you want to convert to USD. For example:\n<code>/bogToUsd 5</code>')
+  const bog = parseFloat(messageArgs[0])
+
+  const html = `
+${bog} BOG = <b>$${roundDecimals(await bogToUsd(bog), 2)}</b>
+  `
+  ctx.replyWithHTML(html)
+})
+
+/**
+ * /usdToBog usdNumber
+ *
+ * Converts a USD ammount to BOG
+ */
+bot.command('usdToBog', async (ctx) => {
+  const messageArgs = ctx.message.text.split(' ').slice(1)
+  if (messageArgs.length !== 1) return ctx.replyWithHTML('You need to provide the ammount of USD that you want to convert to BOG. For example:\n<code>/usdToBog 5</code>')
+  const usd = parseFloat(messageArgs[0])
+
+  const html = `
+$${usd} = <b>${roundDecimals(await usdToBog(usd), 2)} BOG</b>
   `
   ctx.replyWithHTML(html)
 })
