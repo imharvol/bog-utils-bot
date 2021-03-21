@@ -1,6 +1,6 @@
 require('dotenv').config()
 const path = require('path')
-const { getCachedBogPrice, getEarnings, roundDecimals, bogToUsd, usdToBog } = require('./bogUtils')
+const { getCachedBogPrice, getEarnings, roundDecimals, bogToUsd, usdToBog, getBogBalance } = require('./bogUtils')
 const { Telegraf } = require('telegraf') // https://telegraf.js.org/
 const Database = require('better-sqlite3') // https://github.com/JoshuaWise/better-sqlite3/blob/HEAD/docs/api.md
 
@@ -97,7 +97,6 @@ bot.command('earnings', async (ctx) => {
   } else if (messageArgs.length === 1) {
     address = messageArgs[0]
   }
-
   if (!address) return ctx.replyWithHTML('Please provide a address like this:\n<code>/earnings 0xd7b729ef857aa773f47d37088a1181bb3fbf0099</code>\n\nYou can also set a default addres with /setAddress and then simply call /earnings.')
 
   const earningsBOG = await getEarnings(address, 2)
@@ -120,14 +119,17 @@ bot.command('resume', async (ctx) => {
   const address = db.prepare('SELECT address FROM users WHERE id = ?').get(ctx.from.id).address
   if (!address) return ctx.replyWithHTML('Please, set your address with /setAddress.')
 
+  // TODO: This could be executed concurrently
   const bogPrice = await getCachedBogPrice(2)
   const stakedEarningsBog = await getEarnings(address, 2)
   const stakedEarningsUsd = roundDecimals(bogPrice * stakedEarningsBog, 2)
+  const bogBalance = await getBogBalance(address)
 
   const html = `
 Resume for <b>${address}</b>:
 - Current BOG price: <b>$${bogPrice}</b>
-- Staked earnings: <b>${stakedEarningsBog}</b> BOG = <b>$${stakedEarningsUsd}</b> 
+- Staked earnings: <b>${stakedEarningsBog}</b> BOG = <b>$${stakedEarningsUsd}</b>
+- Current balance: <b>${roundDecimals(bogBalance, 2)}</b> BOG = <b>$${roundDecimals(await bogToUsd(bogBalance), 2)}</b>
   `
   ctx.replyWithHTML(html)
 })
@@ -164,7 +166,33 @@ $${usd} = <b>${roundDecimals(await usdToBog(usd), 2)} BOG</b>
   ctx.replyWithHTML(html)
 })
 
+/**
+ * /balance account
+ *
+ * Gets a account's balance. If no account is provided, the balance of the default address will be returned.
+ */
+bot.command('balance', async (ctx) => {
+  const messageArgs = ctx.message.text.split(' ').slice(1)
+  let address
+  if (messageArgs.length === 0) {
+    address = db.prepare('SELECT address FROM users WHERE id = ?').get(ctx.from.id).address
+  } else if (messageArgs.length === 1) {
+    address = messageArgs[0]
+  }
+  if (!address) return ctx.replyWithHTML('Please provide a address like this:\n<code>/balance 0xd7b729ef857aa773f47d37088a1181bb3fbf0099</code>\n\nYou can also set a default addres with /setAddress and then simply call /balance.')
+
+  const bogBalance = await getBogBalance(address)
+
+  const html = `
+Balance for <b>${address}</b>:
+<b>${roundDecimals(bogBalance, 2)}</b> BOG = <b>$${roundDecimals(await bogToUsd(bogBalance), 2)}</b>
+    `
+  ctx.replyWithHTML(html)
+})
+
 bot.launch()
 
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
+
+// TODO: Add commas when numbers are big

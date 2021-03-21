@@ -137,4 +137,14 @@ async function usdToBog (usd) {
   return usd / (await getCachedBogPrice())
 }
 
-module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals, startCaching, stopCaching, bogToUsd, usdToBog }
+async function getBogBalance (account) {
+  const contractAddress = '0xd7b729ef857aa773f47d37088a1181bb3fbf0099'
+  const contract = await getContract(contractAddress)
+
+  const balance = await contract.methods.balanceOf(account).call()
+  const decimals = await contract.methods.decimals().call()
+
+  return balance / (10 ** decimals)
+}
+
+module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals, startCaching, stopCaching, bogToUsd, usdToBog, getBogBalance }
