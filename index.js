@@ -50,7 +50,7 @@ bot.help((ctx) => {
  */
 bot.command('price', async (ctx) => {
   const decimals = 4
-  const bogPrice = getCachedBogPrice(decimals)
+  const bogPrice = await getCachedBogPrice(decimals)
   const html = `
 The current rates are:
 1 BOG = <b>$${bogPrice}</b>
@@ -99,7 +99,7 @@ bot.command('earnings', async (ctx) => {
   if (!address) return ctx.replyWithHTML('Please provide a address like this:\n<code>/earnings 0xd7b729ef857aa773f47d37088a1181bb3fbf0099</code>\n\nYou can also set a default addres with /setAddress and then simply call /earnings.')
 
   const earningsBOG = await getEarnings(address, 2)
-  const earningsUSD = roundDecimals(earningsBOG * getCachedBogPrice(), 2)
+  const earningsUSD = roundDecimals(earningsBOG * await getCachedBogPrice(), 2)
 
   const html = `
 Earnings for <b>${address}</b>:
@@ -118,7 +118,7 @@ bot.command('resume', async (ctx) => {
   const address = db.prepare('SELECT address FROM users WHERE id = ?').get(ctx.from.id).address
   if (!address) return ctx.replyWithHTML('Please, set your address with /setAddress.')
 
-  const bogPrice = getCachedBogPrice(2)
+  const bogPrice = await getCachedBogPrice(2)
   const stakedEarningsBog = await getEarnings(address, 2)
   const stakedEarningsUsd = roundDecimals(bogPrice * stakedEarningsBog, 2)
 

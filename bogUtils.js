@@ -3,8 +3,13 @@ const https = require('https') // https://nodejs.org/api/https.html
 
 const web3 = new Web3('https://bsc-dataseed.binance.org/')
 
-// Variable that updates every ~500ms with the $BOG price with 4 decimals
-let cachedBogPrice = null
+const CACHING_TIME = 1000
+const CACHING_THRESHOLD = 2500 // Determines for how much time a cached price is accepted
+
+let cachedBogPrice = null // Variable that updates every ~500ms with the $BOG price with 4 decimals
+let cachedBogPriceTimestamp = null // Timestamp of the cached BOG price
+let cachingInterval // Boolean that determines if the price should be cached periodically
+const cachedAbis = {} // Map of cached addess-abi // TODO: Maybe add a timeout to re-cache the abis once in a while
 
 /**
  * Rounds a number n to d decimals
@@ -41,11 +46,10 @@ function fetch (url, options = {}) {
  */
 async function getContract (address) {
   // Get the ABI
-  const req = await fetch('https://api.bscscan.com/api?module=contract&action=getabi&address=' + address + '&format=raw')
-  const abi = JSON.parse(req)
+  if (!cachedAbis[address]) cachedAbis[address] = JSON.parse(await fetch('https://api.bscscan.com/api?module=contract&action=getabi&address=' + address + '&format=raw'))
 
   // Get the contract
-  const contract = new web3.eth.Contract(abi, address)
+  const contract = new web3.eth.Contract(cachedAbis[address], address)
 
   return contract
 }
@@ -66,27 +70,24 @@ async function getBogPrice (decimals) {
   const bogBnb = (10 ** priceDecimals) / bog
   const bogUsd = roundDecimals(bnbUsd * bogBnb, decimals)
 
+  // Cache the price
+  cachedBogPrice = bogUsd
+  cachedBogPriceTimestamp = Date.now()
+
   return bogUsd
 }
 
 /**
- * Gets a cached BOG token price which is updated every 500ms. This method is more recommended than getBogPrice, as getBogPrice takes some time.
+ * Gets a cached BOG token price which is updated periodically if startCaching() has been called.
+ * If it's not updated, it'll get the current price (not a cached one), will cache it and return it.
  * @param {Number} decimals Wanted decimals on the price, the rest will be rounded
  * @returns BOG token cached price
  */
-function getCachedBogPrice (decimals) {
-  if (!cachedBogPrice) throw new Error('cachedBogPrice is undefined. Probably the bot is still starting.')
+async function getCachedBogPrice (decimals) {
+  if (Date.now() > cachedBogPriceTimestamp + CACHING_THRESHOLD) await getBogPrice()
 
   return roundDecimals(cachedBogPrice, decimals)
 }
-
-// Caches the price of bog every 500ms into the cachedBogPrice variable
-(async () => {
-  while (true) {
-    cachedBogPrice = await getBogPrice(4)
-    await new Promise(resolve => setTimeout(resolve, 500))
-  }
-})()
 
 /**
  * Returns staking earnings of a address in $BOG
@@ -104,6 +105,20 @@ async function getEarnings (address, decimals) {
   return roundDecimals(earnings, decimals)
 }
 
-module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals }
+/**
+ * Starts caching the price periodically
+ */
+function startCaching () {
+  cachingInterval = setInterval(getBogPrice, CACHING_TIME)
+}
+
+/**
+ * Stops caching the price periodically
+ */
+function stopCaching () {
+  if (cachingInterval) clearInterval(cachingInterval)
+}
+
+module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals, startCaching, stopCaching }
 
 // TODO: Add function to stop caching the price
