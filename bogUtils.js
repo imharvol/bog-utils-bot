@@ -3,13 +3,13 @@ const https = require('https') // https://nodejs.org/api/https.html
 
 const web3 = new Web3('https://bsc-dataseed.binance.org/')
 
-const CACHING_TIME = 1000
+const CACHING_TIME = 1000 // How often is the cached price updated
 const CACHING_THRESHOLD = 2500 // Determines for how much time a cached price is accepted
 
 let cachedBogPrice = null // Variable that updates every ~500ms with the $BOG price with 4 decimals
 let cachedBogPriceTimestamp = null // Timestamp of the cached BOG price
 let cachingInterval // Boolean that determines if the price should be cached periodically
-const cachedAbis = {} // Map of cached addess-abi // TODO: Maybe add a timeout to re-cache the abis once in a while
+const cachedAbis = {} // Map of cached address-abi
 
 /**
  * Rounds a number n to d decimals
@@ -40,13 +40,17 @@ function fetch (url, options = {}) {
 }
 
 /**
- * Returns a web3 contract object from an address
+ * Returns a web3 contract object from an address. Fetches the ABI from BscScan and caches it if it isn't already cached.
  * @param {string} address Address of the contract
  * @returns web3 contract instance of the contract
  */
 async function getContract (address) {
   // Get the ABI
-  if (!cachedAbis[address]) cachedAbis[address] = JSON.parse(await fetch('https://api.bscscan.com/api?module=contract&action=getabi&address=' + address + '&format=raw'))
+  if (!cachedAbis[address]) {
+    const request = JSON.parse(await fetch(`https://api.bscscan.com/api?module=contract&action=getabi&address=${address}&apikey=${process.env.BSCSCAN_TOKEN}`))
+    if (request.message !== 'OK') throw new Error("Could not retrieve the contract's ABI")
+    cachedAbis[address] = JSON.parse(request.result)
+  }
 
   // Get the contract
   const contract = new web3.eth.Contract(cachedAbis[address], address)
@@ -55,7 +59,7 @@ async function getContract (address) {
 }
 
 /**
- * Gets the BOG token price using the BOG Oracle
+ * Gets the BOG token price in USD using the BOG Oracle
  * @param {Number} decimals Wanted decimals on the price, the rest will be rounded
  * @returns BOG token price
  */
@@ -74,11 +78,11 @@ async function getBogPrice (decimals) {
   cachedBogPrice = bogUsd
   cachedBogPriceTimestamp = Date.now()
 
-  return bogUsd
+  return cachedBogPrice
 }
 
 /**
- * Gets a cached BOG token price which is updated periodically if startCaching() has been called.
+ * Gets a cached BOG token price in USD which is updated periodically if startCaching() has been called.
  * If it's not updated, it'll get the current price (not a cached one), will cache it and return it.
  * @param {Number} decimals Wanted decimals on the price, the rest will be rounded
  * @returns BOG token cached price
@@ -100,7 +104,7 @@ async function getEarnings (address, decimals) {
   const contract = await getContract(contractAddress)
 
   const priceDecimals = await contract.methods.decimals().call()
-  const earnings = (await contract.methods.getEarnings(address).call()) / (10 ** priceDecimals) // In BOG
+  const earnings = (await contract.methods.getEarnings(address).call()) / (10 ** priceDecimals) // Earnings in BOG
 
   return roundDecimals(earnings, decimals)
 }

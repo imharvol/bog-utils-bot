@@ -8,9 +8,11 @@ Current functionality:
 You can try the bot right now: http://t.me/BOGUtilsBot
 
 ### How to run
-1. Create a .env file with your bot's token:
+1. Create a .env file with your telegram bot's and BscScan auth tokens:
 ```
-BOT_TOKEN=YOUR-TOKEN
+TELEGRAM_TOKEN=YOUR_TELEGRAM_TOKEN
+BSCSCAN_TOKEN=YOUR_BSCSCAN_TOKEN
 ```
-2. Generate de SQLite Database with `npm run createDatabase`. The database will be saved in ./db.sqlite.
-3. Run the bot with `npm start`.
+2. Install the dependencies with `npm install`.
+3. Generate de SQLite Database with `npm run createDatabase`. The database will be saved in ./db.sqlite.
+4. Run the bot with `npm start`.

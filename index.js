@@ -5,7 +5,7 @@ const { Telegraf } = require('telegraf') // https://telegraf.js.org/
 const Database = require('better-sqlite3') // https://github.com/JoshuaWise/better-sqlite3/blob/HEAD/docs/api.md
 
 const db = new Database(path.join(__dirname, 'db.sqlite')/*, { verbose: console.log } */)
-const bot = new Telegraf(process.env.BOT_TOKEN)
+const bot = new Telegraf(process.env.TELEGRAM_TOKEN)
 
 /**
  * /start
@@ -116,7 +116,7 @@ Earnings for <b>${address}</b>:
  * Right now it only returns the BOG price and the staked earnings.
  */
 bot.command('resume', async (ctx) => {
-  const address = db.prepare('SELECT address FROM users WHERE id = ?').get(ctx.from.id).address
+  const address = db.prepare('SELECT address FROM users WHERE id = ?').get(ctx.from.id)?.address
   if (!address) return ctx.replyWithHTML('Please, set your address with /setAddress.')
 
   // TODO: This could be executed concurrently
