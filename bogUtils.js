@@ -1,7 +1,10 @@
+const path = require('path')
+const fs = require('fs')
 const Web3 = require('web3') // https://web3js.readthedocs.io/en/v1.3.4/index.html
 const https = require('https') // https://nodejs.org/api/https.html
 
-const web3 = new Web3('https://bsc-dataseed.binance.org/')
+// https://bsc-dataseed.binance.org/
+const web3 = new Web3(process.env.RPC_ENDPOINT || 'https://bsc-dataseed.binance.org/')
 
 const CACHING_TIME = 1000 // How often is the cached price updated
 const CACHING_THRESHOLD = 2500 // Determines for how much time a cached price is accepted
@@ -10,6 +13,9 @@ let cachedBogPrice = null // Variable that updates every ~500ms with the $BOG pr
 let cachedBogPriceTimestamp = null // Timestamp of the cached BOG price
 let cachingInterval // Boolean that determines if the price should be cached periodically
 const cachedAbis = {} // Map of cached address-abi
+
+// Sniper's contract
+cachedAbis['0x8dc28ba111cde2342c083936157f6a8e53fe5514'] = JSON.parse(fs.readFileSync(path.join(__dirname, 'sniper-abi.json')))
 
 /**
  * Rounds a number n to d decimals
@@ -40,20 +46,28 @@ function fetch (url, options = {}) {
 }
 
 /**
- * Returns a web3 contract object from an address. Fetches the ABI from BscScan and caches it if it isn't already cached.
- * @param {string} address Address of the contract
- * @returns web3 contract instance of the contract
+ * Returns the ABI interface of a contract
+ * @param {String} address
+ * @returns JSON ABI interface
  */
-async function getContract (address) {
-  // Get the ABI
+async function getAbi (address) {
   if (!cachedAbis[address]) {
     const request = JSON.parse(await fetch(`https://api.bscscan.com/api?module=contract&action=getabi&address=${address}&apikey=${process.env.BSCSCAN_TOKEN}`))
     if (request.message !== 'OK') throw new Error("Could not retrieve the contract's ABI")
     cachedAbis[address] = JSON.parse(request.result)
   }
 
-  // Get the contract
-  const contract = new web3.eth.Contract(cachedAbis[address], address)
+  return cachedAbis[address]
+}
+
+/**
+ * Returns a web3 contract object from an address. Fetches the ABI from BscScan and caches it if it isn't already cached.
+ * @param {string} address Address of the contract
+ * @returns web3 contract instance of the contract
+ */
+async function getContract (address) {
+  const abi = await getAbi(address)
+  const contract = new web3.eth.Contract(abi, address)
 
   return contract
 }
@@ -141,6 +155,11 @@ async function usdToBog (usd) {
   return usd / (await getCachedBogPrice())
 }
 
+/**
+ * Returns the BOG balance of an address
+ * @param {String} account
+ * @returns BOG balance of account
+ */
 async function getBogBalance (account) {
   const contractAddress = '0xd7b729ef857aa773f47d37088a1181bb3fbf0099'
   const contract = await getContract(contractAddress)
@@ -151,4 +170,14 @@ async function getBogBalance (account) {
   return balance / (10 ** decimals)
 }
 
-module.exports = { getBogPrice, getCachedBogPrice, getEarnings, roundDecimals, startCaching, stopCaching, bogToUsd, usdToBog, getBogBalance }
+/**
+ * Gets all possible events for a contract
+ * @param {String} contract
+ * @returns List of possible event names
+ */
+async function getContractEvents (contract) {
+  const abi = await getAbi(contract)
+  return abi.filter(e => e.type === 'event').map(e => e.name)
+}
+
+module.exports = { getContract, getBogPrice, getCachedBogPrice, getEarnings, roundDecimals, startCaching, stopCaching, bogToUsd, usdToBog, getBogBalance, getContractEvents }

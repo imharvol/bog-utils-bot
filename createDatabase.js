@@ -3,11 +3,19 @@ const Database = require('better-sqlite3') // https://github.com/JoshuaWise/bett
 
 const db = new Database(path.join(__dirname, 'db.sqlite'))
 
-db.prepare(`
+db.exec(`
 CREATE TABLE "users" (
   "id" INTEGER NOT NULL UNIQUE,
   "username" TEXT NOT NULL UNIQUE,
   "address" TEXT,
   PRIMARY KEY("id")
 );
-`).run()
+
+CREATE TABLE "subscriptions" (
+    "userId" INTEGER,
+    "eventName" TEXT,
+    "address" TEXT,
+    PRIMARY KEY("userId","eventName","address"),
+    FOREIGN KEY("userId") REFERENCES "users"
+);
+`)
