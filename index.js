@@ -56,14 +56,14 @@ bot.command('price', async (ctx) => {
 })
 
 /**
- * /setAddress address
+ * /setaddress address
  *
  * Sets a default address to use by other commands if a address is not provided.
  * We first check that the user is already registered.
  */
-bot.command('setAddress', async (ctx) => {
+bot.command('setaddress', async (ctx) => {
   const messageArgs = ctx.message.text.split(' ').slice(1)
-  if (messageArgs.length !== 1) return ctx.replyWithHTML(telegramMessages['/setAddress-no-address'])
+  if (messageArgs.length !== 1) return ctx.replyWithHTML(telegramMessages['/setaddress-no-address'])
 
   const address = messageArgs[0].toLowerCase()
 
@@ -71,7 +71,7 @@ bot.command('setAddress', async (ctx) => {
   if (!userRegistered) return ctx.replyWithHTML(telegramMessages['not-registered'])
   db.prepare('UPDATE users SET address = ? WHERE id IS ?').run(address, ctx.from.id)
 
-  const html = ejs.render(telegramMessages['/setAddress'], { address })
+  const html = ejs.render(telegramMessages['/setaddress'], { address })
   ctx.replyWithHTML(html)
 })
 
@@ -128,34 +128,34 @@ bot.command('resume', async (ctx) => {
 })
 
 /**
- * /bogToUsd bogNumber
+ * /bogtousd bogNumber
  *
- * Converts a BOG ammount to USD
+ * Converts a BOG amount to USD
  */
-bot.command('bogToUsd', async (ctx) => {
+bot.command('bogtousd', async (ctx) => {
   const messageArgs = ctx.message.text.split(' ').slice(1)
-  if (messageArgs.length !== 1) return ctx.replyWithHTML(telegramMessages['/bogToUsd-no-amount'])
+  if (messageArgs.length !== 1) return ctx.replyWithHTML(telegramMessages['/bogtousd-no-amount'])
   const bogAmount = parseFloat(messageArgs[0])
 
   const usdAmount = roundDecimals(await bogToUsd(bogAmount), 2)
 
-  const html = ejs.render(telegramMessages['/bogToUsd'], { bogAmount, usdAmount })
+  const html = ejs.render(telegramMessages['/bogtousd'], { bogAmount, usdAmount })
   ctx.replyWithHTML(html)
 })
 
 /**
- * /usdToBog usdNumber
+ * /usdtobog usdNumber
  *
- * Converts a USD ammount to BOG
+ * Converts a USD amount to BOG
  */
-bot.command('usdToBog', async (ctx) => {
+bot.command('usdtobog', async (ctx) => {
   const messageArgs = ctx.message.text.split(' ').slice(1)
-  if (messageArgs.length !== 1) return ctx.replyWithHTML(telegramMessages['/usdToBog-no-amount'])
+  if (messageArgs.length !== 1) return ctx.replyWithHTML(telegramMessages['/usdtobog-no-amount'])
   const usdAmount = parseFloat(messageArgs[0])
 
   const bogAmount = roundDecimals(await usdToBog(usdAmount), 2)
 
-  const html = ejs.render(telegramMessages['/usdToBog'], { usdAmount, bogAmount })
+  const html = ejs.render(telegramMessages['/usdtobog'], { usdAmount, bogAmount })
   ctx.replyWithHTML(html)
 })
 
