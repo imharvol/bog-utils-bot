@@ -24,5 +24,10 @@
   "/unsubscribe-no-args": "Please provide a event name and address like this:\n<code>/unsubscribe eventName 0xd7b729ef857aa773f47d37088a1181bb3fbf0099</code>\n\nYou can also set a default addres with /setaddress and then simply call\n<code>/unsubscribe eventName</code>\n\nYou can also use \"all\" as event name and/or address",
   "/unsubscribe-not-subscribed": "You are not subscribed to that event/address",
   "/unsubscribe": "You have been succesfully unsubscribed from <b><%= eventName %></b> events on <b><%= address %></b><%if (address === 'all') { %> addresses<% } %>",
-  "snipe-event-triggered": "Event <%= eventName %> has been triggered for order id <%= orderID %> and owner <%= address %>"
+  "snipe-event-triggered": "Event <b><%= eventName %></b> has been triggered for order id <b><%= orderID %></b> and owner <b><%= address %></b>",
+  "option-not-suported": "I'm sorry that option is not suported",
+  "myAddress": "📝 My Address 📝\n\n<% if (address) { %>This is your current Address: <b><%= address %></b><% } else { %>You don't have an address, set one below<% } %>",
+  "setAddress": "📝 Reply with your address to set it as the default address",
+  "removeAddress": "📝 My Address 📝\n\nYour address has been removed",
+  "copyAddress": "📝 My Address 📝\n\nPress on the address to copy it:\n<pre><%= address %></pre>"
 }

@@ -1,10 +1,12 @@
 require('dotenv').config()
 const path = require('path')
 const fs = require('fs')
-const { getContract, getCachedBogPrice, getEarnings, roundDecimals, bogToUsd, usdToBog, getBogBalance, getContractEvents } = require('./bogUtils')
-const { Telegraf } = require('telegraf') // https://telegraf.js.org/
+const { Telegraf, Markup } = require('telegraf') // https://telegraf.js.org/
 const Database = require('better-sqlite3') // https://github.com/JoshuaWise/better-sqlite3/blob/HEAD/docs/api.md
 const ejs = require('ejs')
+
+const { getContract, getCachedBogPrice, getEarnings, roundDecimals, bogToUsd, usdToBog, getBogBalance, getContractEvents } = require('./bogUtils')
+const callbackHandlers = require('./callbackHandlers')
 
 const db = new Database(path.join(__dirname, 'db.sqlite')/*, { verbose: console.log } */)
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN)
@@ -12,6 +14,38 @@ const bot = new Telegraf(process.env.TELEGRAM_TOKEN)
 const telegramMessages = JSON.parse(fs.readFileSync('telegram-messages.json'))
 
 const sniperContractAddress = '0x8dc28ba111cde2342c083936157f6a8e53fe5514'
+
+// ===== Setup Middleware ===== //
+bot.use((ctx, next) => {
+  ctx.bog = {}
+
+  ctx.bog.address = db.prepare('SELECT address FROM users WHERE id = ?').get(ctx.from.id).address
+
+  next()
+})
+
+// ===== Setup Menu and its Callbacks ===== //
+bot.command('menu', (ctx) => {
+  return ctx.reply('📋 BogUtilsBot Menu 📋\n\nUse the buttons below to navigate', {
+    parse_mode: 'HTML',
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('❓ Help ❓', 'help')],
+      [Markup.button.callback('📝 My Address 📝', 'myAddress')],
+      [Markup.button.callback('📋 Resume 📋', 'resume')],
+      [Markup.button.callback('💵 Price 💵', 'price')],
+      [Markup.button.callback('💰 Balance 💰', 'balance')],
+      [Markup.button.callback('💸 Staking Earnings 💸', 'stakingEarnings')]
+    ]).resize()
+  })
+})
+
+bot.on('callback_query', (ctx) => {
+  if (callbackHandlers[ctx.update.callback_query.data]) {
+    callbackHandlers[ctx.update.callback_query.data](db, bot, ctx)
+  } else {
+    bot.telegram.answerCbQuery(ctx.update.callback_query.id, telegramMessages['option-not-suported'])
+  }
+})
 
 /**
  * /start
@@ -279,9 +313,65 @@ bot.command('unsubscribe', async (ctx) => {
   ctx.replyWithHTML(html)
 })
 
+/**
+ * /source
+ *
+ * Returns a link to the bot's source code
+ */
 bot.command('source', async (ctx) => {
   const html = telegramMessages['/source']
   ctx.replyWithHTML(html)
+})
+
+const expecting = []
+/**
+ * Expects a message from a user or replying to another message and executes a function depending on a check
+ *
+ * options:
+ * options.replyTo - Message ID we're expecting they reply to
+ * options.messageFrom - User ID we're expecting the message from
+ * options.messageCheck - Function that receives the ctx of the message and returns a boolean. Defailt: returns always true
+ * options.messageCheckFail - Function called when the messageCheck function returns false. Default: Does nothing
+ * options.messageCheckSuccess - Function called when the messageCheck function returns true. Default: Does nothing
+ * options.deleteAfterFail - Determines if the listener should be removed after messageCheck returns false. Default: true
+ * options.deleteAfterSuccess - Determines if the listener should be removed after messageCheck returns true. Default: true
+ * options.timeout - Determines a amount of time after which the listener is removed. Default: 3 minutes
+ * @param {Object} options
+ */
+bot.expect = (options = {}) => {
+  if (!options.replyTo && !options.messageFrom) throw new Error('You must expect a reply to some message, a message from someone or both')
+
+  options.messageCheck = options.messageCheck ?? (() => true)
+  options.messageCheckFail = options.messageCheckFail ?? noop
+  options.messageCheckSuccess = options.messageCheckSuccess ?? noop
+  options.deleteAfterFail = options.deleteAfterFail ?? true
+  options.deleteAfterSuccess = options.deleteAfterSuccess ?? true
+  options.timeout = options.timeout ?? 3 * 60 * 1000
+
+  expecting.push(options)
+
+  // TODO: We could remove this timeout once the expected message is received
+  setTimeout(() => {
+    const i = expecting.findIndex(e => e === options)
+    if (i > -1) expecting.splice(i, 1)
+  }, options.timeout)
+}
+
+bot.on('message', (ctx) => {
+  for (let i = 0; i < expecting.length; i++) {
+    const expected = expecting[i]
+
+    if (expected.messageFrom && ctx.update.message.from.id !== expected.messageFrom) continue
+    if (expected.replyTo && ctx.update.message?.reply_to_message?.message_id !== expected.replyTo) continue
+
+    if (expected.messageCheck(ctx)) {
+      expected.messageCheckSuccess(ctx)
+      if (expected.deleteAfterSuccess) expecting.splice(i--, 1)
+    } else {
+      expected.messageCheckFail(ctx)
+      if (expected.deleteAfterFail) expecting.splice(i--, 1)
+    }
+  }
 })
 
 async function main () {
@@ -304,7 +394,7 @@ async function main () {
     const html = ejs.render(telegramMessages['snipe-event-triggered'], { eventName, orderID, address })
 
     for (const subscriber of subscribers) {
-      bot.telegram.sendMessage(subscriber.userId, html)
+      bot.telegram.sendMessage(subscriber.userId, html, { parse_mode: 'HTML' })
     }
   })
 }
@@ -314,3 +404,5 @@ process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
 
 // TODO: Add commas when numbers are big
+
+function noop () { }
