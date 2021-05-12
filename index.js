@@ -165,6 +165,8 @@ bot.command('usdtobog', async (ctx) => {
  * Gets a account's balance. If no account is provided, the balance of the default address will be returned.
  */
 bot.command('balance', async (ctx) => {
+  const decimals = 4
+
   const messageArgs = ctx.message.text.split(' ').slice(1)
   let address
   if (messageArgs.length === 0) {
@@ -174,13 +176,8 @@ bot.command('balance', async (ctx) => {
   }
   if (!address) return ctx.replyWithHTML(telegramMessages['/balance-no-address'])
 
-  let bogBalance = getBogBalance(address)
-  let usdBalance = bogToUsd(bogBalance)
-
-  await Promise.all(bogBalance, usdBalance)
-
-  bogBalance = roundDecimals(await bogBalance, 2)
-  usdBalance = roundDecimals(await usdBalance, 2)
+  const bogBalance = roundDecimals(await getBogBalance(address), decimals)
+  const usdBalance = roundDecimals(await bogToUsd(bogBalance), decimals)
 
   const html = ejs.render(telegramMessages['/balance'], { address, bogBalance, usdBalance })
   ctx.replyWithHTML(html)
