@@ -30,11 +30,11 @@ bot.command('menu', (ctx) => {
     parse_mode: 'HTML',
     ...Markup.inlineKeyboard([
       [Markup.button.callback('❓ Help ❓', 'help')],
-      [Markup.button.callback('📝 My Address 📝', 'myAddress')],
       [Markup.button.callback('📋 Resume 📋', 'resume')],
       [Markup.button.callback('💵 Price 💵', 'price')],
       [Markup.button.callback('💰 Balance 💰', 'balance')],
-      [Markup.button.callback('💸 Staking Earnings 💸', 'stakingEarnings')]
+      [Markup.button.callback('💸 Staking Earnings 💸', 'stakingEarnings')],
+      [Markup.button.callback('📝 My Address 📝', 'myAddress')]
     ]).resize()
   })
 })
@@ -47,6 +47,7 @@ bot.on('callback_query', (ctx) => {
   }
 })
 
+// ===== Commands ===== //
 /**
  * /start
  *

@@ -1,6 +1,6 @@
 {
   "/start": "Welcome, <b><%=username%></b>!\n\nI'm a unofficial and <a href=\"https://github.com/imharvol/bog-utils-bot\">open source</a> utility bot for <a href=\"http://bogtools.io/\">BogTools</a> and the <a href=\"https://bogged.finance/\">BOG token</a>. Check what I can do for you with /help",
-  "/help": "- <b>/price</b> - Returns the price of BOG\n- <b>/setaddress address</b> - Sets the default address for the other commands\n- <b>/earnings [address]</b> - Returns the amount of staked earnings\n- <b>/resume</b> -  Returns a resume of the account and of the BOG token\n- <b>/bogtousd amount</b> -  Converts amount of BOG to USD\n- <b>/usdtobog amount</b> -  Converts amount of USD to BOG\n- <b>/subscribe eventName [address]</b> - Subscribe to a sniper event\n- <b>/unsubscribe eventName [address]</b> - Subscribe from a sniper event\n- <b>/subscriptions</b> - Check your current subscriptions and possible events \n- <b>/source</b> - My source code!",
+  "/help": "- <b>/menu</b> Opens the menu\n- <b>/price</b> - Returns the price of BOG\n- <b>/setaddress address</b> - Sets the default address for the other commands\n- <b>/earnings [address]</b> - Returns the amount of staked earnings\n- <b>/resume</b> -  Returns a resume of the account and of the BOG token\n- <b>/bogtousd amount</b> -  Converts amount of BOG to USD\n- <b>/usdtobog amount</b> -  Converts amount of USD to BOG\n- <b>/subscribe eventName [address]</b> - Subscribe to a sniper event\n- <b>/unsubscribe eventName [address]</b> - Subscribe from a sniper event\n- <b>/subscriptions</b> - Check your current subscriptions and possible events \n- <b>/source</b> - My source code!",
   "/price": "The current rate is:\n1 BOG = <b>$<%=bogPrice%></b>",
   "/setaddress-no-address": "To set your default address you need to specify a address. For example:\n<code>/setaddress 0xd7b729ef857aa773f47d37088a1181bb3fbf0099</code>",
   "/setaddress": "<b><%=address%></b> is now your default address",
@@ -29,5 +29,12 @@
   "myAddress": "📝 My Address 📝\n\n<% if (address) { %>This is your current Address: <b><%= address %></b><% } else { %>You don't have an address, set one below<% } %>",
   "setAddress": "📝 Reply with your address to set it as the default address",
   "removeAddress": "📝 My Address 📝\n\nYour address has been removed",
-  "copyAddress": "📝 My Address 📝\n\nPress on the address to copy it:\n<pre><%= address %></pre>"
+  "copyAddress": "📝 My Address 📝\n\nPress on the address to copy it:\n<pre><%= address %></pre>",
+  "price": "Current price:\n1 BOG = $<%= bogPrice %>",
+  "resume": "Resume for <b><%=address%></b>:\n- Current BOG price: <b>$<%=bogPrice%></b>\n- Staked earnings: <b><%=stakedEarningsBog%></b> BOG = <b>$<%=stakedEarningsUsd%></b>\n- Current balance: <b><%=balanceBog%></b> BOG = <b>$<%=balanceUsd%></b>",
+  "resume-no-address": "You have not set your default address. Use the /menu to set your default address.",
+  "balance-no-address": "You have not set your default address. Use the /menu to set your default address.",
+  "balance": "Balance for <b><%=address%></b>:\n<b><%=bogBalance%></b> BOG = <b>$<%=usdBalance%></b>",
+  "stakingEarnings": "Earnings for <b><%=address%></b>:\n<b><%=earningsBOG%></b> BOG = <b>$<%=earningsUSD%></b>",
+  "stakingEarnings-no-address": "You have not set your default address. Use the /menu to set your default address."
 }
